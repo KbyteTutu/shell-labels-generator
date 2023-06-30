@@ -1,5 +1,5 @@
 <template>
-    <h1>涂涂的贝壳标签生成器 v0.5</h1>
+    <h1>涂涂的贝壳标签生成器 v0.7</h1>
     <ShellLabelGenerator />
 </template>
 
@@ -7,9 +7,11 @@
 import ShellLabelGen from './components/ShellLabelGen.vue'
 
 export default {
-    name: 'App',
+    name: 'App', mounted() {
+        document.title = '涂涂的贝壳标签生成器';
+    },
     components: {
-        ShellLabelGenerator: ShellLabelGen
+        ShellLabelGenerator: ShellLabelGen,
     },
 }
 </script>

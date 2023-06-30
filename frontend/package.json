@@ -10,8 +10,11 @@
   "dependencies": {
     "core-js": "^3.8.3",
     "fabric": "^5.3.0",
+    "filepond": "^4.30.4",
     "jspdf": "^2.5.1",
-    "vue": "^3.2.13"
+    "vue": "^3.2.13",
+    "vue-filepond": "^7.0.3",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@babel/core": "^7.12.16",
