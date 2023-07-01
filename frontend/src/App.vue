@@ -1,6 +1,8 @@
 <template>
-    <h1>涂涂的贝壳标签生成器 v0.7</h1>
+    <h1>涂涂的贝壳标签生成器 v1.0</h1>
     <ShellLabelGenerator />
+    <p style="text-align: center;margin-top: 20px;font-size: 5px;">© 2023 涂涂的角落 京ICP备2022009849号 tutu.gold <a
+            href="https://github.com/KbyteTutu/shell-labels-generator">开源项目</a></p>
 </template>
 
 <script>

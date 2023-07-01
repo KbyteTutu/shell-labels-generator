@@ -1,25 +1,61 @@
 
 <template>
-    <div>
-        <p>可以用鼠标来随意修改下面标签中各个元素的位置、大小等。</p>
+    <div style="font-size: 10px;line-height: 4px;">
+        <p>可以用鼠标来随意修改下面标签中各个元素的位置、大小、旋转</p>
+        <p>支持按住shift多选编辑字体颜色。可以选中文本后点击字体框，然后使用上下键切换查看效果</p>
         <p>右下角的卖家标记可以双击编辑内容</p>
-        <p style="font-size: 5px; color: red;">保存布局、修改字体、添加背景图片等功能筹备中……</p>
     </div>
+
     <div class="container">
         <div class="canvas-container" style="display: flex; flex-direction: column; align-items: center;">
             <div>
                 <canvas id="Label"></canvas>
-                <br />
-                <!-- <button class="button-spacing" @click="download">下载标签图片</button> -->
             </div>
         </div>
     </div>
+    <div style="margin-bottom: 5px;">
+        <label for="font-selector">字体:</label>
+        <select id="font-selector" v-model="selectedFont" @change="setFont" @click="setFont">
+            <option value="SimSun">宋体</option>
+            <option value="SimHei">黑体</option>
+            <option value="Microsoft YaHei">微软雅黑</option>
+            <option value="KaiTi">楷体</option>
+            <option value="FangSong">仿宋</option>
+            <option value="LiSu">隶书</option>
+            <option value="YouYuan">幼圆</option>
+            <option value="STXihei">华文细黑</option>
+            <option value="STKaiti">华文楷体</option>
+            <option value="STSong">华文宋体</option>
+            <option value="STZhongsong">华文中宋</option>
+            <option value="Courier New">Courier New</option>
+            <option value="Georgia">Georgia</option>
+            <option value="Times New Roman">Times New Roman</option>
+            <option value="Verdana">Verdana</option>
+            <option value="Helvetica">Helvetica</option>
+            <option value="Palatino">Palatino</option>
+            <option value="Garamond">Garamond</option>
+            <option value="Bookman">Bookman</option>
+            <option value="Avant Garde">Avant Garde</option>
+            <option value="Trebuchet MS">Trebuchet MS</option>
+            <option value="Arial">Arial</option>
+            <option value="Courier New">Courier New</option>
+            <option value="Times New Roman">Times New Roman</option>
+        </select>
+        <label for="color-selector">颜色:</label>
+        <input id="color-selector" type="color" v-model="selectedColor" @change="setFont">
+    </div>
+    <div>
+        <button @click="uploadBackground" style="margin-bottom: 10px">上传背景图片（235px * 135px）</button>
+        <input type="file" ref="uploaderBg" @change="loadBackground" style="display: none" />
+        <br />
+        <button class="button-spacing" @click="downloadJson">下载标签布局</button>
+        <button @click="uploadJson">上传标签布局</button>
+        <input type="file" ref="uploader" @change="loadFabricCanvas" style="display: none" />
+    </div>
     <p>填写这张<a href="https://tutu.gold/fileshare/shells.xlsx" target="_blank">贝壳信息表</a>并在此上传，然后点击生成pdf文件即可</p>
     <div class="xlsx-upload">
-        <input type="file" @change="onFileChange" accept=".xlsx" />
-        <div v-for="(row, index) in data" :key="index">
-            {{ row }}
-        </div>
+        <input type="file" @change="onFileChange"
+            accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" />
     </div>
     <div>
         <br />
@@ -46,40 +82,53 @@ export default {
                 shellSize: "尺寸:",
                 shellQuality: "品相:",
                 shellInfo: "信息:",
-                shellSeller: "tutu's label",
+                shellSeller: "涂涂的贝壳",
             },
             dataInfo: [{
                 shellIDValue: "0",
-                shellNameValue: "太阳缀壳螺",
+                shellNameValue: "太阳缀壳螺未定种",
                 shellLatinValue: "Xenophora solarioides sp.",
                 shellAuthorValue: "涛总",
                 shellLocationValue: "China",
-                shellSizeValue: "100mm",
+                shellSizeValue: "200cm",
                 shellQualityValue: "F+++/Gem",
                 shellFamilyValue: "缀壳螺科",
                 shellInfoValue: "葛大店海域8000米深的海沟内",
             }]
         };
         let smallCanvases = [];
-
+        let selectedObject = null;
+        let selectedFont = 'Microsoft YaHei';
+        let selectedColor = '#000000';
         return {
-            canvas, input, smallCanvases
+            canvas, input, smallCanvases, selectedFont, selectedObject, selectedColor
         }
     },
     mounted() {
         this.createCanvas(0);
     },
     methods: {
+        setFont() {
+            let activeTextboxList = this.canvas.getActiveObjects()
+            activeTextboxList.forEach(activeTextbox => {
+                if (activeTextbox) {
+                    activeTextbox.set({ fill: this.selectedColor });
+                    activeTextbox.set({ fontFamily: this.selectedFont });
+                    this.canvas.renderAll();
+                }
+            });
+        },
         createCanvas(idx) {
             this.canvas = new fabric.Canvas('Label', {
                 width: 235,
                 height: 135,
+                overflow: 'hidden'
             });
 
             let background = new fabric.Rect({
                 width: this.canvas.width,
                 height: this.canvas.height,
-                fill: 'white',
+                fill: 'transparent',
                 selectable: false,
                 evented: false,
             });
@@ -100,7 +149,7 @@ export default {
             this.canvas.add(border);
             this.stdFrame(idx);
             return this.canvas;
-        }, createTextbox(text, left, top, width, fontsize, edit, canvas) {
+        }, createTextbox(text, left, top, width, fontsize, edit) {
             let textbox = new fabric.Textbox(text, {
                 left: left,
                 top: top,
@@ -108,46 +157,30 @@ export default {
                 fontSize: fontsize,
                 editable: edit,
                 splitByGrapheme: true,
-
+                fontFamily: "Microsoft YaHei"
             });
 
-            // Add a 'moving' event listener to the textbox
-            textbox.on('moving', function () {
-                let obj = this;
-                // Limit the movement within the canvas boundaries
-                obj.setCoords();
-                if (obj.getBoundingRect().top < 0 || obj.getBoundingRect().left < 0) {
-                    obj.top = Math.max(obj.top, 0);
-                    obj.left = Math.max(obj.left, 0);
-                }
-                if (obj.getBoundingRect().top + obj.getBoundingRect().height > canvas.getHeight() || obj.getBoundingRect().left + obj.getBoundingRect().width > canvas.getWidth()) {
-                    obj.top = Math.min(obj.top, canvas.getHeight() - obj.getBoundingRect().height + obj.top - obj.getBoundingRect().top);
-                    obj.left = Math.min(obj.left, canvas.getWidth() - obj.getBoundingRect().width + obj.left - obj.getBoundingRect().left);
-                }
-            });
-
-            // canvas.add(textbox);
             return textbox;
         }, stdFrame(idx) {
             const elements = [
-                { key: 'shellName', x: 10, y: 10, w: 40, h: 12, editable: false, source: 'basicInfo' },
-                { key: 'shellLatin', x: 10, y: 25, w: 40, h: 12, editable: false, source: 'basicInfo' },
-                { key: 'shellAuthor', x: 10, y: 40, w: 40, h: 12, editable: false, source: 'basicInfo' },
-                { key: 'shellLocation', x: 10, y: 55, w: 40, h: 12, editable: false, source: 'basicInfo' },
-                { key: 'shellSize', x: 10, y: 70, w: 40, h: 12, editable: false, source: 'basicInfo' },
+                { key: 'shellName', x: 10, y: 10, w: 50, h: 12, editable: false, source: 'basicInfo' },
+                { key: 'shellLatin', x: 10, y: 25, w: 50, h: 12, editable: false, source: 'basicInfo' },
+                { key: 'shellAuthor', x: 10, y: 40, w: 50, h: 12, editable: false, source: 'basicInfo' },
+                { key: 'shellLocation', x: 10, y: 55, w: 50, h: 12, editable: false, source: 'basicInfo' },
+                { key: 'shellSize', x: 10, y: 70, w: 50, h: 12, editable: false, source: 'basicInfo' },
                 { key: 'shellQuality', x: 110, y: 70, w: 30, h: 12, editable: false, source: 'basicInfo' },
-                { key: 'shellInfo', x: 10, y: 85, w: 40, h: 12, editable: false, source: 'basicInfo' },
-                { key: 'shellSeller', x: 180, y: 120, w: 40, h: 9, editable: true, source: 'basicInfo' },
+                { key: 'shellInfo', x: 10, y: 85, w: 50, h: 12, editable: false, source: 'basicInfo' },
+                { key: 'shellSeller', x: 180, y: 120, w: 50, h: 9, editable: true, source: 'basicInfo' },
 
-                { key: 'shellIDValue', x: 200, y: 5, w: 160, h: 9, editable: true, source: 'dataInfo' },
+                { key: 'shellIDValue', x: 200, y: 5, w: 50, h: 9, editable: true, source: 'dataInfo' },
                 { key: 'shellNameValue', x: 55, y: 10, w: 160, h: 12, editable: true, source: 'dataInfo' },
                 { key: 'shellLatinValue', x: 55, y: 27, w: 160, h: 10, editable: true, source: 'dataInfo' },
                 { key: 'shellAuthorValue', x: 55, y: 41, w: 160, h: 10, editable: true, source: 'dataInfo' },
                 { key: 'shellLocationValue', x: 55, y: 56, w: 160, h: 10, editable: true, source: 'dataInfo' },
-                { key: 'shellSizeValue', x: 55, y: 70, w: 80, h: 12, editable: true, source: 'dataInfo' },
+                { key: 'shellSizeValue', x: 55, y: 70, w: 50, h: 12, editable: true, source: 'dataInfo' },
                 { key: 'shellQualityValue', x: 150, y: 70, w: 80, h: 12, editable: true, source: 'dataInfo' },
                 { key: 'shellFamilyValue', x: 10, y: 120, w: 80, h: 9, editable: true, source: 'dataInfo' },
-                { key: 'shellInfoValue', x: 55, y: 86, w: 160, h: 12, editable: true, source: 'dataInfo' },
+                { key: 'shellInfoValue', x: 55, y: 85, w: 160, h: 12, editable: true, source: 'dataInfo' },
             ];
             this.canvas.textBoxes = {};
             elements.forEach(element => {
@@ -165,14 +198,47 @@ export default {
                 this.canvas.textBoxes[element.key] = textbox;
             });
         },
-        download() {
-            // 创建一个链接并设置其 href 属性为画布的数据 URL
-            let link = document.createElement('a');
-            link.href = this.canvas.toDataURL({ format: 'png' });
-            // 将下载文件名设置为 'canvas.png'
-            link.download = 'label.png';
-            // 模拟点击链接来下载图像
-            link.click();
+        downloadJson() {
+            // 假设 "canvas" 是你的 fabric.Canvas 实例
+            let json = this.canvas.toJSON();
+            // 创建一个 "a" 元素来下载数据
+            let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(json));
+            let downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", "label_design.json");
+            document.body.appendChild(downloadAnchorNode); // required for firefox
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+        }, uploadJson() {
+            this.$refs.uploader.click();
+        },
+        loadFabricCanvas(event) {
+            const file = event.target.files[0];
+            if (file) {
+                let reader = new FileReader();
+                reader.onload = (event) => {
+                    const json = JSON.parse(event.target.result);
+                    this.canvas.loadFromJSON(json, this.canvas.renderAll.bind(this.canvas));
+                };
+                reader.readAsText(file);
+            }
+        }, uploadBackground() {
+            this.$refs.uploaderBg.click();
+        },
+        loadBackground(event) {
+            const file = event.target.files[0];
+            if (file) {
+                let reader = new FileReader();
+                reader.onload = (event) => {
+                    fabric.Image.fromURL(event.target.result, (img) => {
+                        this.canvas.setBackgroundImage(img, this.canvas.renderAll.bind(this.canvas), {
+                            scaleX: this.canvas.width / img.width,
+                            scaleY: this.canvas.height / img.height
+                        });
+                    });
+                };
+                reader.readAsDataURL(file);
+            }
         }, onFileChange(e) {
             const file = e.target.files[0];
             const reader = new FileReader();
@@ -243,6 +309,9 @@ export default {
                     return new Promise((resolve) => {
                         let smallCanvas = new fabric.Canvas();
                         smallCanvas.loadFromJSON(canvasData, () => {
+                            smallCanvas.overflow = 'hidden';
+                            smallCanvas.width = smallCanvasWidth;
+                            smallCanvas.height = smallCanvasHeight;
                             let smallCanvasDataUrl = smallCanvas.toDataURL({
                                 format: 'png',
                                 quality: 1,
@@ -261,6 +330,7 @@ export default {
                                 resolve();
                             });
                         });
+
                     });
                 });
 
@@ -283,8 +353,13 @@ export default {
                     pdf.addImage(imageData, 'JPEG', 10, 10);
 
                 });
-
-                pdf.save('labels.pdf');
+                if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+                    var blob = pdf.output();
+                    window.open(URL.createObjectURL(blob));
+                }
+                else {
+                    pdf.save('labels.pdf');
+                }
             });
         }
     },
